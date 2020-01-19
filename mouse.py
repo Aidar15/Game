@@ -20,6 +20,54 @@ def load_image(name, colorkey=None):
     return image
 
 
+def load_image_thorn_right(name, colorkey=None):
+    fullname = os.path.join('data', name)
+    image = pygame.image.load(fullname).convert()
+    if colorkey is not None:
+        if colorkey == -1:
+            colorkey = image.get_at((150, 0))
+        image.set_colorkey(colorkey)
+    else:
+        image = image.convert_alpha()
+    return image
+
+
+def load_image_thorn_left(name, colorkey=None):
+    fullname = os.path.join('data', name)
+    image = pygame.image.load(fullname).convert()
+    if colorkey is not None:
+        if colorkey == -1:
+            colorkey = image.get_at((1, 5))
+        image.set_colorkey(colorkey)
+    else:
+        image = image.convert_alpha()
+    return image
+
+
+def load_image_thorn_top(name, colorkey=None):
+    fullname = os.path.join('data', name)
+    image = pygame.image.load(fullname).convert()
+    if colorkey is not None:
+        if colorkey == -1:
+            colorkey = image.get_at((6, 12))
+        image.set_colorkey(colorkey)
+    else:
+        image = image.convert_alpha()
+    return image
+
+
+def load_image_thorn_down(name, colorkey=None):
+    fullname = os.path.join('data', name)
+    image = pygame.image.load(fullname).convert()
+    if colorkey is not None:
+        if colorkey == -1:
+            colorkey = image.get_at((0, 160))
+        image.set_colorkey(colorkey)
+    else:
+        image = image.convert_alpha()
+    return image
+
+
 def load_level(filename):
     filename = "data/" + filename
     # читаем уровень, убирая символы перевода строки
@@ -233,16 +281,16 @@ stop = 1
 v = 200
 fps = 100
 wall_image = load_image('wall.png')
-thorn_image = load_image('шип.png', -1)
-player_image = pygame.transform.scale(load_image("стикмен-стоит.png", -1), (28, 57))
+thorn_image = load_image('шип.png')
+player_image = pygame.transform.scale(load_image("стикмен-стоит.png"), (28, 57))
 key_image = pygame.transform.scale(load_image('ключ1.png', -1), (40, 44))
 tile_images = {"wall": load_image("wall.png"),
-               "right": pygame.transform.scale(load_image("right.png", -1), (21, 21)),
-               "left": pygame.transform.scale(load_image("left.png", -1), (21, 21)),
-               "top": pygame.transform.scale(load_image("top.png", -1), (21, 21)),
-               "down": pygame.transform.scale(load_image("down.png", -1), (21, 21)),
-               "thorn": load_image("шип.png", -1),
-               "door": pygame.transform.scale(load_image("door.png"), (30, 150))}
+               "right": pygame.transform.scale(load_image_thorn_right("right_normal.png", -1), (21, 21)),
+               "left": pygame.transform.scale(load_image_thorn_left("left_normal.png", -1), (21, 21)),
+               "top": pygame.transform.scale(load_image_thorn_top("top_normal.png", -1), (21, 21)),
+               "down": pygame.transform.scale(load_image_thorn_down("down_normal.png", -1), (21, 21)),
+               "thorn": load_image("шип.png"),
+               "door": pygame.transform.scale(load_image("door.png", -1), (30, 150))}
 tile_width = tile_height = 21
 if __name__ == "__main__":
     start_screen()
