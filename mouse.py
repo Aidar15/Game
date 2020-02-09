@@ -81,6 +81,8 @@ def load_level(filename):
 
 
 def generate_level(levelmap):
+    global door
+    global key
     first_player, x, y = None, None, None
     fon = pygame.transform.scale(
         load_image('fon2.jpg'),
@@ -98,7 +100,7 @@ def generate_level(levelmap):
                 Tile("top", x, y)
             elif levelmap[y][x] == '4':
                 Tile("down", x, y)
-    Tile('door', 49, 26)
+    door = Door(49, 25.7)
     first_player = Player(5, 13)
     key = Key(52, 6)
     return first_player, x, y
@@ -113,8 +115,13 @@ class Key(pygame.sprite.Sprite):
             tile_width * pos_x + 15, tile_height * pos_y + 5)
 
 
-class Door:
-    pass
+class Door(pygame.sprite.Sprite):
+    def __init__(self, pos_x, pos_y):
+        super().__init__(door_group, all_sprites)
+        self.image = door_image
+        self.type = "door"
+        self.rect = self.image.get_rect().move(
+            tile_width * pos_x + 15, tile_height * pos_y + 5)
 
 
 class Tile(pygame.sprite.Sprite):
@@ -131,36 +138,60 @@ class Player(pygame.sprite.Sprite):
         super().__init__(player_group, all_sprites)
         self.pos_x = pos_x
         self.pos_y = pos_y
+        self.jump_power = 35
+        self.jump_check = False
         self.image = player_image
         self.type = "player"
         self.rect = self.image.get_rect().move(
             tile_width * pos_x + 15, tile_height * pos_y + 5)
 
     def update(self):
-        if move_1 == "Up":
-            # player.image = walkUp
-            player.move(0, -step)
+        global walk_r_count
+        global walk_l_count
+        clock.tick(fps)
+        # if move_1 == "Up" and self.on_ground_or_not():
+        #    player.image = jump
+        #    self.jump_check = True
         if move_1 == "Right":
-            # player.image = walkRight
+            if not self.jump_check:
+                player.image = walkRight[walk_r_count]
+                walk_r_count += 1
+                if walk_r_count == 12:
+                    walk_r_count = 0
             player.move(+step, 0)
         if move_1 == "Left":
-            # player.image = walkLeft
+            if not self.jump_check:
+                player.image = walkLeft[walk_l_count]
+                walk_l_count += 1
+                if walk_l_count == 12:
+                    walk_l_count = 0
             player.move(-step, 0)
 
     def move(self, dx, dy):
+        global gravity_step
+        global jump_step
+        global which_level
         self.rect.x += dx
         self.rect.y += dy
         test = pygame.sprite.spritecollide(self, tiles_group, False)
-        #        if len(test) == 0:
-        #            self.gravity()
+        test1 = pygame.sprite.spritecollide(self, key_group, False)
+        test2 = pygame.sprite.spritecollide(self, door_group, False)
+        if width - 60 < self.rect.x < width:
+            which_level += 1
+        print(which_level)
+        for obj in test1:
+            Key.kill(obj)
+            Door.kill(door)
+        for obj in test2:
+            self.rect.x -= dx
+            self.rect.y -= dy
+            break
         for obj in test:
-            if obj.type == "wall" or obj.type == "door":
-                self.rect.x -= dx
-                self.rect.y -= dy
-                break
-
-        test = pygame.sprite.spritecollide(self, tiles_group, False)
-        for obj in test:
+            self.image = player_image
+            # key = Key(52, 6)
+            # door = Door(49, 25.7)
+            key_group.draw(screen)
+            door_group.draw(screen)
             if obj.type == "right":
                 self.rect.x = tile_width * self.pos_x + 15
                 self.rect.y = tile_height * self.pos_y + 5
@@ -176,11 +207,54 @@ class Player(pygame.sprite.Sprite):
             elif obj.type == "down":
                 self.rect.x = tile_width * self.pos_x + 15
                 self.rect.y = tile_height * self.pos_y + 5
+                self.jump_check = False
+                self.jump_power = 35
+                gravity_step = 2
+                jump_step = 8
+                break
+        for obj in test:
+            if obj.type == "wall":
+                if dy > 0:
+                    gravity_step = 2
+                    jump_step = 8
+                    self.jump_power = 35
+                    self.jump_check = False
+                    self.image = player_image
+                elif dy < 0:
+                    gravity_step = 2
+                    jump_step = 8
+                    self.jump_power = 35
+                    self.jump_check = False
+                    print(9)
+                self.rect.x -= dx
+                self.rect.y -= dy
                 break
 
+    def move_up(self):
+        global JUMP_GRAVITY
+        global jump_step
+        self.move(0, -jump_step)
+        jump_step *= JUMP_GRAVITY
+        self.jump_power -= 1
+        if self.jump_power == 0:
+            self.jump_check = False
 
-#    def gravity(self):
-#        self.rect.y += step
+    def gravity(self):
+        global GRAVITY
+        global gravity_step
+        self.jump_power = 35
+        self.move(0, gravity_step)
+        gravity_step /= GRAVITY
+
+    def on_ground_or_not(self):
+        global step
+        self.rect.y += step
+        test = pygame.sprite.spritecollide(self, tiles_group, False)
+        if len(test) > 0:
+            self.rect.y -= step
+            return True
+        else:
+            return False
 
 
 def start_screen():
@@ -188,25 +262,38 @@ def start_screen():
     global all_sprites
     global player_group
     global key_group
+    global door_group
     global freeze
     global stop
+    global GRAVITY
+    global JUMP_GRAVITY
+    global jump_step
+    global gravity_step
     global player
     global move_1
-    global move_2
+    global walk_r_count
+    global walk_l_count
+    global which_level
+    global which_level_past
     all_sprites = pygame.sprite.Group()
     tiles_group = pygame.sprite.Group()
     player_group = pygame.sprite.Group()
     key_group = pygame.sprite.Group()
+    door_group = pygame.sprite.Group()
     fon = pygame.transform.scale(
         load_image('one.jpg'),
         (width, height))
     fon1 = pygame.transform.scale(
-        load_image('fon2.jpg'),
+        load_image('fon1.png'),
         (width, height))
+    intro_text_levels = [""]
     move_1 = "Stop"
-    move_2 = "Stop"
-    freeze = 0
-    player, level_x, level_y = generate_level(load_level('map'))
+    if which_level != which_level_past:
+        which_level_past += 1
+        if which_level != 1:
+            player.kill()
+        player, level_x, level_y = generate_level(load_level('map'))
+        intro_text_levels = ["01.Тут всё просто"]
     running = True
     while running:
         while running:
@@ -215,39 +302,65 @@ def start_screen():
                     running = False
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                     stop = 0
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_TAB and stop == 0:
                     freeze = (freeze + 1) % 2
                 if freeze == 0 and stop == 0:
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_LEFT:
                         move_1 = "Left"
+
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_RIGHT:
                         move_1 = "Right"
-                    if event.type == pygame.KEYDOWN and event.key == pygame.K_UP:
-                        move_1 = "Up"
 
-                    if event.type == pygame.KEYUP and event.key == pygame.K_LEFT and move_1 == "Left":
+                    if event.type == pygame.KEYUP and \
+                            event.key == pygame.K_LEFT and move_1 == "Left":
                         move_1 = "Stop"
-                    if event.type == pygame.KEYUP and event.key == pygame.K_RIGHT and move_1 == "Right":
+                        walk_l_count = 0
+                        if not player.jump_check:
+                            player.image = player_image
+
+                    if event.type == pygame.KEYUP and \
+                            event.key == pygame.K_RIGHT and move_1 == "Right":
                         move_1 = "Stop"
-                    if event.type == pygame.KEYUP and event.key == pygame.K_UP and move_1 == "Up":
-                        move_1 = "Stop"
+                        walk_r_count = 0
+                        if not player.jump_check:
+                            player.image = player_image
 
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_a:
                         move_1 = "Left"
+
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_d:
                         move_1 = "Right"
-                    if event.type == pygame.KEYDOWN and event.key == pygame.K_w:
-                        move_1 = "Up"
 
                     if event.type == pygame.KEYUP and event.key == pygame.K_a and move_1 == "Left":
                         move_1 = "Stop"
+                        walk_l_count = 0
+                        if not player.jump_check:
+                            player.image = player_image
+
                     if event.type == pygame.KEYUP and event.key == pygame.K_d and move_1 == "Right":
                         move_1 = "Stop"
-                    if event.type == pygame.KEYUP and event.key == pygame.K_w and move_1 == "Up":
-                        move_1 = "Stop"
+                        walk_r_count = 0
+                        if not player.jump_check:
+                            player.image = player_image
+
+                    if player.on_ground_or_not():
+                        if event.type == pygame.KEYDOWN and \
+                                event.key == pygame.K_UP:
+                            move_1 = "Up"
+                            player.jump_check = True
+                        if event.type == pygame.KEYDOWN and \
+                                event.key == pygame.K_w:
+                            move_1 = "Up"
+                            player.jump_check = True
+            if freeze == 0 and stop == 0:
+                if player.jump_check:
+                    player.image = jump
+                    player.move_up()
+                elif not player.on_ground_or_not() and not player.jump_check:
+                    player.image = fall
+                    player.gravity()
             if stop == 1:
                 intro_text = ["Press 'space' to start"]
-
                 screen.blit(fon, (0, 0))
                 pygame.init()
                 font = pygame.font.Font(None, 50)
@@ -263,11 +376,40 @@ def start_screen():
 
                 pygame.display.flip()
             if freeze == 0 and stop == 0:
+                if which_level != which_level_past:
+                    which_level_past += 1
+                    GRAVITY = 0.95
+                    gravity_step = 2
+                    JUMP_GRAVITY = 0.98
+                    jump_step = 8
+                    walk_r_count = 0
+                    walk_l_count = 0
+                    if which_level != 1:
+                        player.kill()
+                    if which_level == 2:
+                        player, level_x, level_y = generate_level(load_level('map'))
+                        intro_text_levels = ["02.Ключ невидимка"]
+                    elif which_level == 3:
+                        player, level_x, level_y = generate_level(load_level('map'))
+                        intro_text_levels = ["03.Пока всё"]
+
                 player.update()
                 screen.fill((0, 0, 0))
                 screen.blit(fon1, (0, 0))
                 tiles_group.draw(screen)
                 key_group.draw(screen)
+                door_group.draw(screen)
+                pygame.init()
+                font = pygame.font.Font(None, 50)
+                text_coord = 50
+                for line in intro_text_levels:
+                    string_rendered = font.render(line, 1, pygame.Color('white'))
+                    intro_rect = string_rendered.get_rect()
+                    text_coord += 220
+                    intro_rect.top = text_coord
+                    intro_rect.x = 400
+                    text_coord += intro_rect.height
+                    screen.blit(string_rendered, intro_rect)
                 player_group.draw(screen)
                 pygame.display.flip()
 
@@ -276,21 +418,62 @@ size = width, height = 1260, 690
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption("One Level")
 clock = pygame.time.Clock()
-step = 3
+step = 4
+GRAVITY = 0.95
+gravity_step = 2
+JUMP_GRAVITY = 0.98
+jump_step = 8
+walk_r_count = 0
+walk_l_count = 0
 stop = 1
+freeze = 0
 v = 200
-fps = 100
+fps = 30
+which_level = 1
+which_level_past = 0
 wall_image = load_image('wall.png')
-thorn_image = load_image('шип.png')
-player_image = pygame.transform.scale(load_image("стикмен-стоит.png"), (28, 57))
-key_image = pygame.transform.scale(load_image('ключ1.png', -1), (40, 44))
+door_image = pygame.transform.scale(load_image("door.png", -1), (30, 150))
+player_image = pygame.transform.scale(load_image("стикмен-стоит2.png", -1), (28, 57))
+jump = pygame.transform.scale(load_image('прыжок.png', -1), (28, 57))
+fall = pygame.transform.scale(load_image('падение.png', -1), (28, 57))
+walkRight = [pygame.transform.scale(load_image('r1.png', -1), (28, 57)),
+             pygame.transform.scale(load_image('r1.png', -1), (28, 57)),
+             pygame.transform.scale(load_image('r2.png', -1), (28, 57)),
+             pygame.transform.scale(load_image('r2.png', -1), (28, 57)),
+             pygame.transform.scale(load_image('r3.png', -1), (28, 57)),
+             pygame.transform.scale(load_image('r3.png', -1), (28, 57)),
+             pygame.transform.scale(load_image('r4.png', -1), (28, 57)),
+             pygame.transform.scale(load_image('r4.png', -1), (28, 57)),
+             pygame.transform.scale(load_image('r5.png', -1), (28, 57)),
+             pygame.transform.scale(load_image('r5.png', -1), (28, 57)),
+             pygame.transform.scale(load_image('r6.png', -1), (28, 57)),
+             pygame.transform.scale(load_image('r6.png', -1), (28, 57)),
+             pygame.transform.scale(load_image('r7.png', -1), (28, 57)),
+             pygame.transform.scale(load_image('r7.png', -1), (28, 57))]
+walkLeft = [pygame.transform.scale(load_image('l1.png', -1), (28, 57)),
+            pygame.transform.scale(load_image('l1.png', -1), (28, 57)),
+            pygame.transform.scale(load_image('l2.png', -1), (28, 57)),
+            pygame.transform.scale(load_image('l2.png', -1), (28, 57)),
+            pygame.transform.scale(load_image('l3.png', -1), (28, 57)),
+            pygame.transform.scale(load_image('l3.png', -1), (28, 57)),
+            pygame.transform.scale(load_image('l4.png', -1), (28, 57)),
+            pygame.transform.scale(load_image('l4.png', -1), (28, 57)),
+            pygame.transform.scale(load_image('l5.png', -1), (28, 57)),
+            pygame.transform.scale(load_image('l5.png', -1), (28, 57)),
+            pygame.transform.scale(load_image('l6.png', -1), (28, 57)),
+            pygame.transform.scale(load_image('l6.png', -1), (28, 57)),
+            pygame.transform.scale(load_image('l7.png', -1), (28, 57)),
+            pygame.transform.scale(load_image('l7.png', -1), (28, 57))]
+
+key_image = pygame.transform.scale(load_image('ключ2.png', -1), (40, 44))
 tile_images = {"wall": load_image("wall.png"),
-               "right": pygame.transform.scale(load_image_thorn_right("right_normal.png", -1), (21, 21)),
-               "left": pygame.transform.scale(load_image_thorn_left("left_normal.png", -1), (21, 21)),
+               "right": pygame.transform.scale(load_image_thorn_right("right_normal.png", -1),
+                                               (21, 21)),
+               "left": pygame.transform.scale(load_image_thorn_left("left_normal.png", -1),
+                                              (21, 21)),
                "top": pygame.transform.scale(load_image_thorn_top("top_normal.png", -1), (21, 21)),
-               "down": pygame.transform.scale(load_image_thorn_down("down_normal.png", -1), (21, 21)),
-               "thorn": load_image("шип.png"),
-               "door": pygame.transform.scale(load_image("door.png", -1), (30, 150))}
+               "down": pygame.transform.scale(load_image_thorn_down("down_normal.png", -1),
+                                              (21, 21))}
 tile_width = tile_height = 21
 if __name__ == "__main__":
     start_screen()
